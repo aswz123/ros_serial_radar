@@ -1,0 +1,10 @@
+<?xml version="1.0"?>
+<launch>
+    <!-- Serial communication node -->
+    <node name="serial_node" pkg="serial_comm" type="serial_node" output="screen">
+        <!-- Serial port parameters -->
+        <param name="port" value="/dev/ttyUSB0" />
+        <param name="baudrate" value="2000000" />
+        <param name="timeout" value="1000" />
+    </node>
+</launch>

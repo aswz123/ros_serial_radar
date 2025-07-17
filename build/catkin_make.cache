@@ -1,0 +1,2 @@
+serial_comm
+-DCATKIN_DEVEL_PREFIX=/home/aswz/catkin_ws/devel -DCMAKE_INSTALL_PREFIX=/home/aswz/catkin_ws/install -G Unix Makefiles
