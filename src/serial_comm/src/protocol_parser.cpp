@@ -4,6 +4,8 @@
 #include <pcl/point_types.h>
 #include <pcl_conversions/pcl_conversions.h>
 #include <std_msgs/String.h>
+#include <serial_comm/RadarCluster.h>
+#include <serial_comm/RadarPointCloud.h>
 #include <iostream>
 #include <string>
 #include <vector>
@@ -16,6 +18,7 @@ class ProtocolParser
 private:
     ros::NodeHandle nh_;
     ros::Publisher pointcloud_pub_;
+    ros::Publisher radar_pointcloud_pub_;  // 新的自定义消息发布者
     ros::Subscriber hex_data_sub_;
     
     std::vector<uint8_t> data_buffer_; // 数据缓冲区
@@ -60,9 +63,10 @@ public:
     {
         // 初始化发布者和订阅者
         pointcloud_pub_ = nh_.advertise<sensor_msgs::PointCloud2>("/radar/pointcloud", 10);
+        radar_pointcloud_pub_ = nh_.advertise<serial_comm::RadarPointCloud>("/radar/pointcloud_custom", 10);
         hex_data_sub_ = nh_.subscribe("/serial/received", 100, &ProtocolParser::hexDataCallback, this); // 增大队列
         
-        ROS_INFO("Protocol Parser initialized");
+        ROS_INFO("Protocol Parser initialized with custom messages");
         
         // 给串口节点一些时间来初始化
         ros::Duration(1.0).sleep();
@@ -91,7 +95,7 @@ public:
 
     void processBuffer()
     {
-        while (data_buffer_.size() >= 12) // Minimum frame length check
+        while (data_buffer_.size() >= 12)
         {
             // Find frame header 0x55 0xAA
             size_t header_pos = SIZE_MAX;
@@ -140,8 +144,8 @@ public:
             uint32_t frameLength = data_buffer_[2] | (data_buffer_[3] << 8) | 
                                   (data_buffer_[4] << 16) | (data_buffer_[5] << 24);
             
-            // 只在异常情况下输出警告
-            if (frameLength > 500 || frameLength < 12)
+            // 调整帧长度限制以适应毫米波雷达的大数据帧
+            if (frameLength > 10000 || frameLength < 12)  // 最大允许10KB的帧
             {
                 ROS_WARN("Abnormal frame length: %u, removing header and searching again", frameLength);
                 data_buffer_.erase(data_buffer_.begin(), data_buffer_.begin() + 2);
@@ -162,10 +166,10 @@ public:
             parseFrame(frame);
         }
         
-        // Prevent buffer from becoming too large
-        if (data_buffer_.size() > 1000)
+        // 增大缓冲区限制以处理大数据帧
+        if (data_buffer_.size() > 15000) // 15KB缓冲区
         {
-            ROS_WARN("Buffer too large, clearing");
+            ROS_WARN("Buffer too large (%zu bytes), clearing", data_buffer_.size());
             data_buffer_.clear();
         }
     }
@@ -192,17 +196,24 @@ public:
         uint8_t type = data[9];
         uint16_t targetNum = data[10] | (data[11] << 8);
         
-        // 只输出关键信息
+        // 输出帧信息（毫米波雷达可能有很多目标）
         ROS_INFO("Frame: %u bytes, %u targets", frameLength, targetNum);
         
-        if (targetNum > 0 && targetNum < 100) // Reasonable target count check
+        // 调整目标数量限制以适应毫米波雷达
+        if (targetNum > 0 && targetNum < 1000) // 最大允许1000个目标点
         {
             // Parse point cloud data directly
             std::vector<PointData> points = parseDirectPointData(data, 12, targetNum);
-            if (!points.empty())
-            {
-                publishPointCloud(points);
-            }
+            
+            // 发布点云
+            publishPointCloud(points);
+        }
+        else
+        {
+            // 如果目标数异常，发布空点云保持连续性
+            std::vector<PointData> empty_points;
+            publishPointCloud(empty_points);
+            ROS_WARN("Abnormal target count: %u, publishing empty pointcloud", targetNum);
         }
     }
 
@@ -210,6 +221,8 @@ public:
     std::vector<PointData> parseDirectPointData(const std::vector<uint8_t>& data, size_t startIndex, uint16_t targetNum)
     {
         std::vector<PointData> points;
+        points.reserve(targetNum); // 预分配内存提高性能
+        
         size_t index = startIndex;
         int validPoints = 0;
         int totalPoints = 0;
@@ -235,8 +248,8 @@ public:
             double azimuth = (int16_t)(idx3 - 32768) * 180.0 / 32768.0; // 方位角 (度)
             double elevation = (int16_t)(idx4 - 32768) * 90.0 / 32768.0; // 俯仰角 (度)
             
-            // 放宽数据有效性检查
-            if (range > 0.05 && range < 300 && 
+            // 数据有效性检查（针对毫米波雷达调整）
+            if (range > 0.1 && range < 300 &&  // 毫米波雷达通常探测距离较远
                 azimuth >= -180 && azimuth <= 180 && 
                 elevation >= -90 && elevation <= 90 &&
                 powABS > 0) // 确保功率值有效
@@ -268,11 +281,19 @@ public:
             index += 12;
         }
         
-        // 输出统计信息
+        // 只在点数较少时输出详细统计，避免大量输出
         if (totalPoints > 0)
         {
-            ROS_INFO("Parsed %d/%d valid points (%.1f%%)", validPoints, totalPoints, 
-                     100.0 * validPoints / totalPoints);
+            if (totalPoints <= 50)
+            {
+                ROS_INFO("Parsed %d/%d valid points (%.1f%%)", validPoints, totalPoints, 
+                         100.0 * validPoints / totalPoints);
+            }
+            else
+            {
+                // 大量点时只输出简要信息
+                ROS_INFO("Parsed %d/%d valid points", validPoints, totalPoints);
+            }
         }
         
         return points;
@@ -280,13 +301,9 @@ public:
     
     void publishPointCloud(const std::vector<PointData>& points)
     {
-        if (points.empty())
-        {
-            return;
-        }
-        
         // 创建PCL点云
         pcl::PointCloud<pcl::PointXYZI>::Ptr cloud(new pcl::PointCloud<pcl::PointXYZI>);
+        cloud->reserve(points.size()); // 预分配内存
         
         for (const auto& point : points)
         {
@@ -312,8 +329,47 @@ public:
         // 发布点云
         pointcloud_pub_.publish(cloud_msg);
         
-        // 只输出简洁的统计信息
-        ROS_INFO("Published pointcloud: %zu points", points.size());
+        // 发布自定义RadarPointCloud消息
+        publishRadarPointCloud(points);
+        
+        // 简化输出信息
+        if (points.empty())
+        {
+            ROS_DEBUG("Published empty pointcloud");
+        }
+        else
+        {
+            ROS_INFO("Published pointcloud: %zu points", points.size());
+        }
+    }
+    
+    void publishRadarPointCloud(const std::vector<PointData>& points)
+    {
+        serial_comm::RadarPointCloud radar_msg;
+        
+        // 设置头部信息
+        radar_msg.header.stamp = ros::Time::now();
+        radar_msg.header.frame_id = "radar_frame";
+        radar_msg.num_points = points.size();
+        
+        // 转换点数据
+        for (const auto& point : points)
+        {
+            serial_comm::RadarCluster radar_point;
+            radar_point.x = point.x;
+            radar_point.y = point.y;
+            radar_point.z = point.z;
+            radar_point.velocity = point.velocity;
+            radar_point.intensity = point.intensity;
+            radar_point.range = point.range;
+            radar_point.azimuth = point.azimuth;
+            radar_point.elevation = point.elevation;
+            
+            radar_msg.points.push_back(radar_point);
+        }
+        
+        // 发布自定义消息
+        radar_pointcloud_pub_.publish(radar_msg);
     }
 };
 

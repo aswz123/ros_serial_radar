@@ -311,6 +311,45 @@ serial_node/fast:
 .PHONY : serial_node/fast
 
 #=============================================================================
+# Target rules for targets named serial_comm_genpy
+
+# Build rule for target.
+serial_comm_genpy: cmake_check_build_system
+	$(MAKE) -f CMakeFiles/Makefile2 serial_comm_genpy
+.PHONY : serial_comm_genpy
+
+# fast build rule for target.
+serial_comm_genpy/fast:
+	$(MAKE) -f serial_comm/CMakeFiles/serial_comm_genpy.dir/build.make serial_comm/CMakeFiles/serial_comm_genpy.dir/build
+.PHONY : serial_comm_genpy/fast
+
+#=============================================================================
+# Target rules for targets named _serial_comm_generate_messages_check_deps_RadarCluster
+
+# Build rule for target.
+_serial_comm_generate_messages_check_deps_RadarCluster: cmake_check_build_system
+	$(MAKE) -f CMakeFiles/Makefile2 _serial_comm_generate_messages_check_deps_RadarCluster
+.PHONY : _serial_comm_generate_messages_check_deps_RadarCluster
+
+# fast build rule for target.
+_serial_comm_generate_messages_check_deps_RadarCluster/fast:
+	$(MAKE) -f serial_comm/CMakeFiles/_serial_comm_generate_messages_check_deps_RadarCluster.dir/build.make serial_comm/CMakeFiles/_serial_comm_generate_messages_check_deps_RadarCluster.dir/build
+.PHONY : _serial_comm_generate_messages_check_deps_RadarCluster/fast
+
+#=============================================================================
+# Target rules for targets named serial_comm_generate_messages
+
+# Build rule for target.
+serial_comm_generate_messages: cmake_check_build_system
+	$(MAKE) -f CMakeFiles/Makefile2 serial_comm_generate_messages
+.PHONY : serial_comm_generate_messages
+
+# fast build rule for target.
+serial_comm_generate_messages/fast:
+	$(MAKE) -f serial_comm/CMakeFiles/serial_comm_generate_messages.dir/build.make serial_comm/CMakeFiles/serial_comm_generate_messages.dir/build
+.PHONY : serial_comm_generate_messages/fast
+
+#=============================================================================
 # Target rules for targets named tf2_msgs_generate_messages_nodejs
 
 # Build rule for target.
@@ -454,6 +493,19 @@ geometry_msgs_generate_messages_eus/fast:
 .PHONY : geometry_msgs_generate_messages_eus/fast
 
 #=============================================================================
+# Target rules for targets named serial_comm_gencpp
+
+# Build rule for target.
+serial_comm_gencpp: cmake_check_build_system
+	$(MAKE) -f CMakeFiles/Makefile2 serial_comm_gencpp
+.PHONY : serial_comm_gencpp
+
+# fast build rule for target.
+serial_comm_gencpp/fast:
+	$(MAKE) -f serial_comm/CMakeFiles/serial_comm_gencpp.dir/build.make serial_comm/CMakeFiles/serial_comm_gencpp.dir/build
+.PHONY : serial_comm_gencpp/fast
+
+#=============================================================================
 # Target rules for targets named sensor_msgs_generate_messages_cpp
 
 # Build rule for target.
@@ -517,6 +569,19 @@ topic_tools_generate_messages_cpp: cmake_check_build_system
 topic_tools_generate_messages_cpp/fast:
 	$(MAKE) -f serial_comm/CMakeFiles/topic_tools_generate_messages_cpp.dir/build.make serial_comm/CMakeFiles/topic_tools_generate_messages_cpp.dir/build
 .PHONY : topic_tools_generate_messages_cpp/fast
+
+#=============================================================================
+# Target rules for targets named serial_comm_generate_messages_eus
+
+# Build rule for target.
+serial_comm_generate_messages_eus: cmake_check_build_system
+	$(MAKE) -f CMakeFiles/Makefile2 serial_comm_generate_messages_eus
+.PHONY : serial_comm_generate_messages_eus
+
+# fast build rule for target.
+serial_comm_generate_messages_eus/fast:
+	$(MAKE) -f serial_comm/CMakeFiles/serial_comm_generate_messages_eus.dir/build.make serial_comm/CMakeFiles/serial_comm_generate_messages_eus.dir/build
+.PHONY : serial_comm_generate_messages_eus/fast
 
 #=============================================================================
 # Target rules for targets named geometry_msgs_generate_messages_py
@@ -701,6 +766,19 @@ pcl_msgs_generate_messages_nodejs/fast:
 .PHONY : pcl_msgs_generate_messages_nodejs/fast
 
 #=============================================================================
+# Target rules for targets named serial_comm_geneus
+
+# Build rule for target.
+serial_comm_geneus: cmake_check_build_system
+	$(MAKE) -f CMakeFiles/Makefile2 serial_comm_geneus
+.PHONY : serial_comm_geneus
+
+# fast build rule for target.
+serial_comm_geneus/fast:
+	$(MAKE) -f serial_comm/CMakeFiles/serial_comm_geneus.dir/build.make serial_comm/CMakeFiles/serial_comm_geneus.dir/build
+.PHONY : serial_comm_geneus/fast
+
+#=============================================================================
 # Target rules for targets named roscpp_generate_messages_eus
 
 # Build rule for target.
@@ -779,6 +857,19 @@ dynamic_reconfigure_generate_messages_py/fast:
 .PHONY : dynamic_reconfigure_generate_messages_py/fast
 
 #=============================================================================
+# Target rules for targets named serial_comm_genlisp
+
+# Build rule for target.
+serial_comm_genlisp: cmake_check_build_system
+	$(MAKE) -f CMakeFiles/Makefile2 serial_comm_genlisp
+.PHONY : serial_comm_genlisp
+
+# fast build rule for target.
+serial_comm_genlisp/fast:
+	$(MAKE) -f serial_comm/CMakeFiles/serial_comm_genlisp.dir/build.make serial_comm/CMakeFiles/serial_comm_genlisp.dir/build
+.PHONY : serial_comm_genlisp/fast
+
+#=============================================================================
 # Target rules for targets named roscpp_generate_messages_py
 
 # Build rule for target.
@@ -790,6 +881,32 @@ roscpp_generate_messages_py: cmake_check_build_system
 roscpp_generate_messages_py/fast:
 	$(MAKE) -f serial_comm/CMakeFiles/roscpp_generate_messages_py.dir/build.make serial_comm/CMakeFiles/roscpp_generate_messages_py.dir/build
 .PHONY : roscpp_generate_messages_py/fast
+
+#=============================================================================
+# Target rules for targets named serial_comm_generate_messages_lisp
+
+# Build rule for target.
+serial_comm_generate_messages_lisp: cmake_check_build_system
+	$(MAKE) -f CMakeFiles/Makefile2 serial_comm_generate_messages_lisp
+.PHONY : serial_comm_generate_messages_lisp
+
+# fast build rule for target.
+serial_comm_generate_messages_lisp/fast:
+	$(MAKE) -f serial_comm/CMakeFiles/serial_comm_generate_messages_lisp.dir/build.make serial_comm/CMakeFiles/serial_comm_generate_messages_lisp.dir/build
+.PHONY : serial_comm_generate_messages_lisp/fast
+
+#=============================================================================
+# Target rules for targets named serial_comm_generate_messages_cpp
+
+# Build rule for target.
+serial_comm_generate_messages_cpp: cmake_check_build_system
+	$(MAKE) -f CMakeFiles/Makefile2 serial_comm_generate_messages_cpp
+.PHONY : serial_comm_generate_messages_cpp
+
+# fast build rule for target.
+serial_comm_generate_messages_cpp/fast:
+	$(MAKE) -f serial_comm/CMakeFiles/serial_comm_generate_messages_cpp.dir/build.make serial_comm/CMakeFiles/serial_comm_generate_messages_cpp.dir/build
+.PHONY : serial_comm_generate_messages_cpp/fast
 
 #=============================================================================
 # Target rules for targets named roscpp_generate_messages_cpp
@@ -1130,6 +1247,19 @@ dynamic_reconfigure_generate_messages_eus/fast:
 .PHONY : dynamic_reconfigure_generate_messages_eus/fast
 
 #=============================================================================
+# Target rules for targets named serial_comm_generate_messages_nodejs
+
+# Build rule for target.
+serial_comm_generate_messages_nodejs: cmake_check_build_system
+	$(MAKE) -f CMakeFiles/Makefile2 serial_comm_generate_messages_nodejs
+.PHONY : serial_comm_generate_messages_nodejs
+
+# fast build rule for target.
+serial_comm_generate_messages_nodejs/fast:
+	$(MAKE) -f serial_comm/CMakeFiles/serial_comm_generate_messages_nodejs.dir/build.make serial_comm/CMakeFiles/serial_comm_generate_messages_nodejs.dir/build
+.PHONY : serial_comm_generate_messages_nodejs/fast
+
+#=============================================================================
 # Target rules for targets named dynamic_reconfigure_gencfg
 
 # Build rule for target.
@@ -1193,6 +1323,32 @@ std_srvs_generate_messages_lisp: cmake_check_build_system
 std_srvs_generate_messages_lisp/fast:
 	$(MAKE) -f serial_comm/CMakeFiles/std_srvs_generate_messages_lisp.dir/build.make serial_comm/CMakeFiles/std_srvs_generate_messages_lisp.dir/build
 .PHONY : std_srvs_generate_messages_lisp/fast
+
+#=============================================================================
+# Target rules for targets named serial_comm_generate_messages_py
+
+# Build rule for target.
+serial_comm_generate_messages_py: cmake_check_build_system
+	$(MAKE) -f CMakeFiles/Makefile2 serial_comm_generate_messages_py
+.PHONY : serial_comm_generate_messages_py
+
+# fast build rule for target.
+serial_comm_generate_messages_py/fast:
+	$(MAKE) -f serial_comm/CMakeFiles/serial_comm_generate_messages_py.dir/build.make serial_comm/CMakeFiles/serial_comm_generate_messages_py.dir/build
+.PHONY : serial_comm_generate_messages_py/fast
+
+#=============================================================================
+# Target rules for targets named serial_comm_gennodejs
+
+# Build rule for target.
+serial_comm_gennodejs: cmake_check_build_system
+	$(MAKE) -f CMakeFiles/Makefile2 serial_comm_gennodejs
+.PHONY : serial_comm_gennodejs
+
+# fast build rule for target.
+serial_comm_gennodejs/fast:
+	$(MAKE) -f serial_comm/CMakeFiles/serial_comm_gennodejs.dir/build.make serial_comm/CMakeFiles/serial_comm_gennodejs.dir/build
+.PHONY : serial_comm_gennodejs/fast
 
 #=============================================================================
 # Target rules for targets named nodelet_generate_messages_eus
@@ -1286,6 +1442,19 @@ std_srvs_generate_messages_eus/fast:
 .PHONY : std_srvs_generate_messages_eus/fast
 
 #=============================================================================
+# Target rules for targets named _serial_comm_generate_messages_check_deps_RadarPointCloud
+
+# Build rule for target.
+_serial_comm_generate_messages_check_deps_RadarPointCloud: cmake_check_build_system
+	$(MAKE) -f CMakeFiles/Makefile2 _serial_comm_generate_messages_check_deps_RadarPointCloud
+.PHONY : _serial_comm_generate_messages_check_deps_RadarPointCloud
+
+# fast build rule for target.
+_serial_comm_generate_messages_check_deps_RadarPointCloud/fast:
+	$(MAKE) -f serial_comm/CMakeFiles/_serial_comm_generate_messages_check_deps_RadarPointCloud.dir/build.make serial_comm/CMakeFiles/_serial_comm_generate_messages_check_deps_RadarPointCloud.dir/build
+.PHONY : _serial_comm_generate_messages_check_deps_RadarPointCloud/fast
+
+#=============================================================================
 # Target rules for targets named nodelet_generate_messages_py
 
 # Build rule for target.
@@ -1348,6 +1517,9 @@ help:
 	@echo "... gtest"
 	@echo "... protocol_parser"
 	@echo "... serial_node"
+	@echo "... serial_comm_genpy"
+	@echo "... _serial_comm_generate_messages_check_deps_RadarCluster"
+	@echo "... serial_comm_generate_messages"
 	@echo "... tf2_msgs_generate_messages_nodejs"
 	@echo "... tf2_msgs_generate_messages_lisp"
 	@echo "... actionlib_msgs_generate_messages_py"
@@ -1359,11 +1531,13 @@ help:
 	@echo "... tf_generate_messages_nodejs"
 	@echo "... tf_generate_messages_lisp"
 	@echo "... geometry_msgs_generate_messages_eus"
+	@echo "... serial_comm_gencpp"
 	@echo "... sensor_msgs_generate_messages_cpp"
 	@echo "... pcl_msgs_generate_messages_cpp"
 	@echo "... std_msgs_generate_messages_py"
 	@echo "... pcl_msgs_generate_messages_eus"
 	@echo "... topic_tools_generate_messages_cpp"
+	@echo "... serial_comm_generate_messages_eus"
 	@echo "... geometry_msgs_generate_messages_py"
 	@echo "... tf2_msgs_generate_messages_eus"
 	@echo "... sensor_msgs_generate_messages_py"
@@ -1378,13 +1552,17 @@ help:
 	@echo "... sensor_msgs_generate_messages_eus"
 	@echo "... pcl_msgs_generate_messages_lisp"
 	@echo "... pcl_msgs_generate_messages_nodejs"
+	@echo "... serial_comm_geneus"
 	@echo "... roscpp_generate_messages_eus"
 	@echo "... topic_tools_generate_messages_nodejs"
 	@echo "... rosgraph_msgs_generate_messages_nodejs"
 	@echo "... std_msgs_generate_messages_lisp"
 	@echo "... actionlib_msgs_generate_messages_eus"
 	@echo "... dynamic_reconfigure_generate_messages_py"
+	@echo "... serial_comm_genlisp"
 	@echo "... roscpp_generate_messages_py"
+	@echo "... serial_comm_generate_messages_lisp"
+	@echo "... serial_comm_generate_messages_cpp"
 	@echo "... roscpp_generate_messages_cpp"
 	@echo "... topic_tools_generate_messages_py"
 	@echo "... geometry_msgs_generate_messages_lisp"
@@ -1411,11 +1589,14 @@ help:
 	@echo "... topic_tools_generate_messages_eus"
 	@echo "... geometry_msgs_generate_messages_nodejs"
 	@echo "... dynamic_reconfigure_generate_messages_eus"
+	@echo "... serial_comm_generate_messages_nodejs"
 	@echo "... dynamic_reconfigure_gencfg"
 	@echo "... nodelet_generate_messages_cpp"
 	@echo "... tf2_msgs_generate_messages_cpp"
 	@echo "... dynamic_reconfigure_generate_messages_lisp"
 	@echo "... std_srvs_generate_messages_lisp"
+	@echo "... serial_comm_generate_messages_py"
+	@echo "... serial_comm_gennodejs"
 	@echo "... nodelet_generate_messages_eus"
 	@echo "... std_msgs_generate_messages_nodejs"
 	@echo "... nodelet_generate_messages_lisp"
@@ -1423,6 +1604,7 @@ help:
 	@echo "... bond_generate_messages_nodejs"
 	@echo "... bond_generate_messages_py"
 	@echo "... std_srvs_generate_messages_eus"
+	@echo "... _serial_comm_generate_messages_check_deps_RadarPointCloud"
 	@echo "... nodelet_generate_messages_py"
 	@echo "... std_srvs_generate_messages_nodejs"
 	@echo "... topic_tools_generate_messages_lisp"

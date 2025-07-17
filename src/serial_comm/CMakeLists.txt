@@ -12,9 +12,11 @@ find_package(catkin REQUIRED COMPONENTS
   rospy
   std_msgs
   sensor_msgs
+  geometry_msgs
   pcl_conversions
   pcl_ros
   serial
+  message_generation
 )
 
 find_package(PCL REQUIRED)
@@ -53,11 +55,11 @@ find_package(PCL REQUIRED)
 ##   * add every package in MSG_DEP_SET to generate_messages(DEPENDENCIES ...)
 
 ## Generate messages in the 'msg' folder
-# add_message_files(
-#   FILES
-#   Message1.msg
-#   Message2.msg
-# )
+add_message_files(
+  FILES
+  RadarCluster.msg
+  RadarPointCloud.msg
+)
 
 ## Generate services in the 'srv' folder
 # add_service_files(
@@ -74,10 +76,11 @@ find_package(PCL REQUIRED)
 # )
 
 ## Generate added messages and services with any dependencies listed here
-# generate_messages(
-#   DEPENDENCIES
-#   std_msgs
-# )
+generate_messages(
+  DEPENDENCIES
+  std_msgs
+  geometry_msgs
+)
 
 ################################################
 ## Declare ROS dynamic reconfigure parameters ##
@@ -111,7 +114,7 @@ find_package(PCL REQUIRED)
 catkin_package(
 #  INCLUDE_DIRS include
 #  LIBRARIES serial_comm
-  CATKIN_DEPENDS roscpp rospy std_msgs serial
+  CATKIN_DEPENDS roscpp rospy std_msgs sensor_msgs geometry_msgs serial message_runtime
 #  DEPENDS system_lib
 )
 
@@ -186,7 +189,7 @@ add_executable(protocol_parser src/protocol_parser.cpp)
 
 ## Add cmake target dependencies of the executable
 ## same as for the library above
-add_dependencies(protocol_parser ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
+add_dependencies(protocol_parser ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS} ${PROJECT_NAME}_generate_messages_cpp)
 
 ## Specify libraries to link a library or executable target against
 target_link_libraries(protocol_parser
