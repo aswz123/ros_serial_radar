@@ -65,8 +65,8 @@ serial_comm/CMakeFiles/serial_comm_generate_messages_py: /home/aswz/catkin_ws/de
 
 /home/aswz/catkin_ws/devel/lib/python3/dist-packages/serial_comm/msg/_RadarPointCloud.py: /opt/ros/noetic/lib/genpy/genmsg_py.py
 /home/aswz/catkin_ws/devel/lib/python3/dist-packages/serial_comm/msg/_RadarPointCloud.py: /home/aswz/catkin_ws/src/serial_comm/msg/RadarPointCloud.msg
-/home/aswz/catkin_ws/devel/lib/python3/dist-packages/serial_comm/msg/_RadarPointCloud.py: /home/aswz/catkin_ws/src/serial_comm/msg/RadarCluster.msg
 /home/aswz/catkin_ws/devel/lib/python3/dist-packages/serial_comm/msg/_RadarPointCloud.py: /opt/ros/noetic/share/std_msgs/msg/Header.msg
+/home/aswz/catkin_ws/devel/lib/python3/dist-packages/serial_comm/msg/_RadarPointCloud.py: /home/aswz/catkin_ws/src/serial_comm/msg/RadarCluster.msg
 	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --blue --bold --progress-dir=/home/aswz/catkin_ws/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_2) "Generating Python from MSG serial_comm/RadarPointCloud"
 	cd /home/aswz/catkin_ws/build/serial_comm && ../catkin_generated/env_cached.sh /usr/bin/python3 /opt/ros/noetic/share/genpy/cmake/../../../lib/genpy/genmsg_py.py /home/aswz/catkin_ws/src/serial_comm/msg/RadarPointCloud.msg -Iserial_comm:/home/aswz/catkin_ws/src/serial_comm/msg -Istd_msgs:/opt/ros/noetic/share/std_msgs/cmake/../msg -Igeometry_msgs:/opt/ros/noetic/share/geometry_msgs/cmake/../msg -p serial_comm -o /home/aswz/catkin_ws/devel/lib/python3/dist-packages/serial_comm/msg
 

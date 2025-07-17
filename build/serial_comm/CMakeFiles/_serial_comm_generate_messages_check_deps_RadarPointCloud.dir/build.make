@@ -54,7 +54,7 @@ CMAKE_BINARY_DIR = /home/aswz/catkin_ws/build
 include serial_comm/CMakeFiles/_serial_comm_generate_messages_check_deps_RadarPointCloud.dir/progress.make
 
 serial_comm/CMakeFiles/_serial_comm_generate_messages_check_deps_RadarPointCloud:
-	cd /home/aswz/catkin_ws/build/serial_comm && ../catkin_generated/env_cached.sh /usr/bin/python3 /opt/ros/noetic/share/genmsg/cmake/../../../lib/genmsg/genmsg_check_deps.py serial_comm /home/aswz/catkin_ws/src/serial_comm/msg/RadarPointCloud.msg serial_comm/RadarCluster:std_msgs/Header
+	cd /home/aswz/catkin_ws/build/serial_comm && ../catkin_generated/env_cached.sh /usr/bin/python3 /opt/ros/noetic/share/genmsg/cmake/../../../lib/genmsg/genmsg_check_deps.py serial_comm /home/aswz/catkin_ws/src/serial_comm/msg/RadarPointCloud.msg std_msgs/Header:serial_comm/RadarCluster
 
 _serial_comm_generate_messages_check_deps_RadarPointCloud: serial_comm/CMakeFiles/_serial_comm_generate_messages_check_deps_RadarPointCloud
 _serial_comm_generate_messages_check_deps_RadarPointCloud: serial_comm/CMakeFiles/_serial_comm_generate_messages_check_deps_RadarPointCloud.dir/build.make

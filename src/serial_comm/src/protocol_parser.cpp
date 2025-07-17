@@ -221,49 +221,123 @@ public:
     std::vector<PointData> parseDirectPointData(const std::vector<uint8_t>& data, size_t startIndex, uint16_t targetNum)
     {
         std::vector<PointData> points;
-        points.reserve(targetNum); // 预分配内存提高性能
+        points.reserve(targetNum);
         
         size_t index = startIndex;
         int validPoints = 0;
         int totalPoints = 0;
         
-        // 每个点12字节
-        for (int pointCount = 0; pointCount < targetNum && index + 12 <= data.size(); pointCount++)
+        // 计算实际可用数据长度
+        size_t availableDataLength = data.size() - startIndex;
+        
+        // 只检查9字节格式（参考代码使用的格式）
+        int bytesPerPoint = 9;
+        bool is9ByteFormat = (availableDataLength % 9 == 0) && (availableDataLength / 9 == targetNum);
+        
+        ROS_INFO("Data analysis: total=%zu, start=%zu, available=%zu", 
+                 data.size(), startIndex, availableDataLength);
+        ROS_INFO("Target count: %u, expected 9-byte format: %s (calc: %zu/9=%zu)", 
+                 targetNum, is9ByteFormat ? "YES" : "NO", 
+                 availableDataLength, availableDataLength/9);
+        
+        if (!is9ByteFormat) {
+            // 如果不是标准9字节，尝试计算实际字节数
+            if (availableDataLength > 0 && targetNum > 0) {
+                int calculatedBytes = availableDataLength / targetNum;
+                ROS_WARN("Not standard 9-byte format. Calculated %d bytes per point", calculatedBytes);
+                if (calculatedBytes >= 9) {
+                    bytesPerPoint = calculatedBytes;
+                }
+            }
+        }
+        
+        for (int pointCount = 0; pointCount < targetNum && index + bytesPerPoint <= data.size(); pointCount++)
         {
             totalPoints++;
             
-            // 解析索引值
+            // 解析基本索引值（前5字节，与参考代码一致）
             uint16_t idx1 = data[index] | (data[index + 1] << 8);
-            uint16_t idx2 = data[index + 2] | (data[index + 3] << 8);
-            uint16_t idx3 = data[index + 4] | (data[index + 5] << 8);
-            uint16_t idx4 = data[index + 6] | (data[index + 7] << 8);
+            uint8_t idx2 = data[index + 2];
+            uint8_t idx3 = data[index + 3];
+            uint8_t idx4 = data[index + 4];
             
-            // 解析功率值
-            uint32_t powABS = data[index + 8] | (data[index + 9] << 8) | 
-                             (data[index + 10] << 16) | (data[index + 11] << 24);
+            // 功率值处理 - 根据参考代码，可能在5-8字节位置
+            uint32_t powABS = 0;
+            if (bytesPerPoint >= 9) {
+                // 按小端格式读取4字节功率值
+                powABS = data[index + 5] | (data[index + 6] << 8) | 
+                         (data[index + 7] << 16) | (data[index + 8] << 24);
+            }
             
-            // 物理值转换
-            double range = idx1 * 0.05; // 距离 (m)
-            double velocity = (int16_t)(idx2 - 32768) * 0.10416; // 速度 (m/s)
-            double azimuth = (int16_t)(idx3 - 32768) * 180.0 / 32768.0; // 方位角 (度)
-            double elevation = (int16_t)(idx4 - 32768) * 90.0 / 32768.0; // 俯仰角 (度)
+            // 详细调试前3个点
+            if (pointCount < 3) {
+                ROS_INFO("=== Point %d (9-byte format) ===", pointCount);
+                
+                std::stringstream hex_ss;
+                for (int i = 0; i < 9 && index + i < data.size(); i++) {
+                    hex_ss << std::hex << std::setw(2) << std::setfill('0') 
+                           << (int)data[index + i] << " ";
+                }
+                ROS_INFO("Raw 9 bytes: %s", hex_ss.str().c_str());
+                
+                ROS_INFO("idx1=%u, idx2=%u, idx3=%u, idx4=%u", idx1, idx2, idx3, idx4);
+                ROS_INFO("Power bytes [5-8]: [%02X %02X %02X %02X] = %u", 
+                         data[index+5], data[index+6], data[index+7], data[index+8], powABS);
+                
+                // 检查功率值是否合理
+                if (powABS > 100000000) {  // 超过1亿
+                    ROS_WARN("Large intensity detected, trying alternatives:");
+                    
+                    // 尝试只用前2字节
+                    uint16_t powABS_16 = data[index + 5] | (data[index + 6] << 8);
+                    ROS_INFO("  16-bit interpretation: %u", powABS_16);
+                    
+                    // 尝试只用第一个字节
+                    uint8_t powABS_8 = data[index + 5];
+                    ROS_INFO("  8-bit interpretation: %u", powABS_8);
+                }
+            }
             
-            // 数据有效性检查（针对毫米波雷达调整）
-            if (range > 0.1 && range < 300 &&  // 毫米波雷达通常探测距离较远
-                azimuth >= -180 && azimuth <= 180 && 
+            // 物理值转换（与参考代码一致）
+            double RangeRes = 0.02479;
+            double _pi = M_PI;
+            
+            double range = idx1 * RangeRes;
+            double velocity = (idx2 - 32) * 0.10416;
+            
+            double azimuth = 0.0;
+            if (idx3 >= 64) {
+                azimuth = asin((idx3 - 128) / 64.0) * 180.0 / _pi;
+            } else {
+                azimuth = asin(idx3 / 64.0) * 180.0 / _pi;
+            }
+            
+            double elevation = 0.0;
+            if (idx4 >= 64) {
+                elevation = asin((idx4 - 128) / 64.0) * 180.0 / _pi;
+            } else {
+                elevation = asin(idx4 / 64.0) * 180.0 / _pi;
+            }
+            
+            // 强度值处理 - 如果太大，使用替代方案
+            uint32_t finalIntensity = powABS;
+            if (powABS > 100000000) {  // 超过1亿，可能解析错误
+                finalIntensity = data[index + 5] | (data[index + 6] << 8);  // 只用16位
+            }
+            
+            // 数据有效性检查
+            if (range > 0.1 && range < 300 &&
+                azimuth >= -90 && azimuth <= 90 &&
                 elevation >= -90 && elevation <= 90 &&
-                powABS > 0) // 确保功率值有效
+                finalIntensity > 0 && finalIntensity < 10000000)  // 限制强度范围
             {
                 validPoints++;
                 
-                // 转换为弧度
-                double azimuth_rad = azimuth * M_PI / 180.0;
-                double elevation_rad = elevation * M_PI / 180.0;
-                
-                // 球坐标转直角坐标
-                double x = range * cos(elevation_rad) * cos(azimuth_rad);
-                double y = range * cos(elevation_rad) * sin(azimuth_rad);
-                double z = range * sin(elevation_rad);
+                // 坐标转换
+                double z = range * sin(elevation / 180.0 * _pi);
+                double xy = range * cos(elevation / 180.0 * _pi);
+                double x = xy * cos(azimuth / 180.0 * _pi);
+                double y = xy * sin(azimuth / 180.0 * _pi);
                 
                 PointData point;
                 point.x = x;
@@ -273,29 +347,15 @@ public:
                 point.velocity = velocity;
                 point.azimuth = azimuth;
                 point.elevation = elevation;
-                point.intensity = powABS;
+                point.intensity = finalIntensity;
                 
                 points.push_back(point);
             }
             
-            index += 12;
+            index += 9;  // 固定使用9字节间隔
         }
         
-        // 只在点数较少时输出详细统计，避免大量输出
-        if (totalPoints > 0)
-        {
-            if (totalPoints <= 50)
-            {
-                ROS_INFO("Parsed %d/%d valid points (%.1f%%)", validPoints, totalPoints, 
-                         100.0 * validPoints / totalPoints);
-            }
-            else
-            {
-                // 大量点时只输出简要信息
-                ROS_INFO("Parsed %d/%d valid points", validPoints, totalPoints);
-            }
-        }
-        
+        ROS_INFO("Parsed %d/%d valid points using 9-byte format", validPoints, totalPoints);
         return points;
     }
     

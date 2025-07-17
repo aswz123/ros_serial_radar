@@ -24,7 +24,7 @@ add_custom_target(_serial_comm_generate_messages_check_deps_${_filename}
 
 get_filename_component(_filename "/home/aswz/catkin_ws/src/serial_comm/msg/RadarPointCloud.msg" NAME_WE)
 add_custom_target(_serial_comm_generate_messages_check_deps_${_filename}
-  COMMAND ${CATKIN_ENV} ${PYTHON_EXECUTABLE} ${GENMSG_CHECK_DEPS_SCRIPT} "serial_comm" "/home/aswz/catkin_ws/src/serial_comm/msg/RadarPointCloud.msg" "serial_comm/RadarCluster:std_msgs/Header"
+  COMMAND ${CATKIN_ENV} ${PYTHON_EXECUTABLE} ${GENMSG_CHECK_DEPS_SCRIPT} "serial_comm" "/home/aswz/catkin_ws/src/serial_comm/msg/RadarPointCloud.msg" "std_msgs/Header:serial_comm/RadarCluster"
 )
 
 #
@@ -42,7 +42,7 @@ _generate_msg_cpp(serial_comm
 _generate_msg_cpp(serial_comm
   "/home/aswz/catkin_ws/src/serial_comm/msg/RadarPointCloud.msg"
   "${MSG_I_FLAGS}"
-  "/home/aswz/catkin_ws/src/serial_comm/msg/RadarCluster.msg;/opt/ros/noetic/share/std_msgs/cmake/../msg/Header.msg"
+  "/opt/ros/noetic/share/std_msgs/cmake/../msg/Header.msg;/home/aswz/catkin_ws/src/serial_comm/msg/RadarCluster.msg"
   ${CATKIN_DEVEL_PREFIX}/${gencpp_INSTALL_DIR}/serial_comm
 )
 
@@ -83,7 +83,7 @@ _generate_msg_eus(serial_comm
 _generate_msg_eus(serial_comm
   "/home/aswz/catkin_ws/src/serial_comm/msg/RadarPointCloud.msg"
   "${MSG_I_FLAGS}"
-  "/home/aswz/catkin_ws/src/serial_comm/msg/RadarCluster.msg;/opt/ros/noetic/share/std_msgs/cmake/../msg/Header.msg"
+  "/opt/ros/noetic/share/std_msgs/cmake/../msg/Header.msg;/home/aswz/catkin_ws/src/serial_comm/msg/RadarCluster.msg"
   ${CATKIN_DEVEL_PREFIX}/${geneus_INSTALL_DIR}/serial_comm
 )
 
@@ -124,7 +124,7 @@ _generate_msg_lisp(serial_comm
 _generate_msg_lisp(serial_comm
   "/home/aswz/catkin_ws/src/serial_comm/msg/RadarPointCloud.msg"
   "${MSG_I_FLAGS}"
-  "/home/aswz/catkin_ws/src/serial_comm/msg/RadarCluster.msg;/opt/ros/noetic/share/std_msgs/cmake/../msg/Header.msg"
+  "/opt/ros/noetic/share/std_msgs/cmake/../msg/Header.msg;/home/aswz/catkin_ws/src/serial_comm/msg/RadarCluster.msg"
   ${CATKIN_DEVEL_PREFIX}/${genlisp_INSTALL_DIR}/serial_comm
 )
 
@@ -165,7 +165,7 @@ _generate_msg_nodejs(serial_comm
 _generate_msg_nodejs(serial_comm
   "/home/aswz/catkin_ws/src/serial_comm/msg/RadarPointCloud.msg"
   "${MSG_I_FLAGS}"
-  "/home/aswz/catkin_ws/src/serial_comm/msg/RadarCluster.msg;/opt/ros/noetic/share/std_msgs/cmake/../msg/Header.msg"
+  "/opt/ros/noetic/share/std_msgs/cmake/../msg/Header.msg;/home/aswz/catkin_ws/src/serial_comm/msg/RadarCluster.msg"
   ${CATKIN_DEVEL_PREFIX}/${gennodejs_INSTALL_DIR}/serial_comm
 )
 
@@ -206,7 +206,7 @@ _generate_msg_py(serial_comm
 _generate_msg_py(serial_comm
   "/home/aswz/catkin_ws/src/serial_comm/msg/RadarPointCloud.msg"
   "${MSG_I_FLAGS}"
-  "/home/aswz/catkin_ws/src/serial_comm/msg/RadarCluster.msg;/opt/ros/noetic/share/std_msgs/cmake/../msg/Header.msg"
+  "/opt/ros/noetic/share/std_msgs/cmake/../msg/Header.msg;/home/aswz/catkin_ws/src/serial_comm/msg/RadarCluster.msg"
   ${CATKIN_DEVEL_PREFIX}/${genpy_INSTALL_DIR}/serial_comm
 )
 
