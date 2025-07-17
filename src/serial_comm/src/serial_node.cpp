@@ -55,12 +55,35 @@ public:
         {
             ROS_INFO("Serial Port initialized");
             
+            // 等待串口稳定并清空缓冲区
+            ros::Duration(0.5).sleep(); // 等待500ms让串口稳定
+            
+            // 清空输入缓冲区
+            try
+            {
+                if(ser_.available() > 0)
+                {
+                    std::string dummy = ser_.read(ser_.available());
+                    ROS_INFO("Cleared %zu bytes from input buffer", dummy.length());
+                }
+            }
+            catch(serial::IOException& e)
+            {
+                ROS_WARN("Error clearing buffer: %s", e.what());
+            }
+            
+            // 再等待一下确保缓冲区清空
+            ros::Duration(0.2).sleep();
+            
             // 发送启动命令
             try
             {
                 std::string start_cmd = "AT+START\n";
                 ser_.write(start_cmd);
                 ROS_INFO("Sent startup command: %s", start_cmd.c_str());
+                
+                // 发送命令后稍等一下
+                ros::Duration(0.1).sleep();
             }
             catch(serial::IOException& e)
             {

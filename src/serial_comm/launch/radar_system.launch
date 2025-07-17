@@ -12,8 +12,8 @@
         <param name="timeout" value="$(arg timeout)" />
     </node>
     
-    <!-- 启动协议解析器 -->
-    <node name="protocol_parser" pkg="serial_comm" type="protocol_parser" output="screen" />
+    <!-- 延迟启动协议解析器，确保串口节点先初始化 -->
+    <node name="protocol_parser" pkg="serial_comm" type="protocol_parser" output="screen" launch-prefix="bash -c 'sleep 2; $0 $@'" />
     
     <!-- 可选：启动RViz查看点云 -->
     <arg name="use_rviz" default="true" />

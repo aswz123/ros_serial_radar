@@ -18,6 +18,8 @@ private:
     ros::Publisher pointcloud_pub_;
     ros::Subscriber hex_data_sub_;
     
+    std::vector<uint8_t> data_buffer_; // 数据缓冲区
+    
     struct PointData
     {
         double x, y, z;
@@ -33,9 +35,12 @@ public:
     {
         // 初始化发布者和订阅者
         pointcloud_pub_ = nh_.advertise<sensor_msgs::PointCloud2>("/radar/pointcloud", 10);
-        hex_data_sub_ = nh_.subscribe("/serial/received", 10, &ProtocolParser::hexDataCallback, this);
+        hex_data_sub_ = nh_.subscribe("/serial/received", 100, &ProtocolParser::hexDataCallback, this); // 增大队列
         
         ROS_INFO("Protocol Parser initialized");
+        
+        // 给串口节点一些时间来初始化
+        ros::Duration(1.0).sleep();
     }
     
     void hexDataCallback(const std_msgs::String::ConstPtr& msg)
@@ -47,19 +52,82 @@ public:
     {
         std::vector<uint8_t> data = hexStringToBytes(hexStr);
         
-        if (data.size() < 12) // 最小帧长度检查
+        // 将新数据添加到缓冲区
+        data_buffer_.insert(data_buffer_.end(), data.begin(), data.end());
+        
+        // 处理缓冲区中的完整帧
+        processBuffer();
+    }
+    
+    void processBuffer()
+    {
+        while (data_buffer_.size() >= 12) // 最小帧长度检查
         {
-            return;
+            // 寻找帧头
+            auto it = std::find_if(data_buffer_.begin(), data_buffer_.end() - 1, 
+                [this](uint8_t byte) {
+                    auto next_it = std::next(&byte - &data_buffer_[0] + data_buffer_.begin());
+                    return byte == 0x55 && next_it != data_buffer_.end() && *next_it == 0xAA;
+                });
+            
+            if (it == data_buffer_.end() - 1) {
+                // 没有找到完整的帧头，保留最后一个字节
+                if (data_buffer_.size() > 1) {
+                    data_buffer_.erase(data_buffer_.begin(), data_buffer_.end() - 1);
+                }
+                break;
+            }
+            
+            // 移除帧头之前的数据
+            size_t header_pos = std::distance(data_buffer_.begin(), it);
+            if (header_pos > 0) {
+                data_buffer_.erase(data_buffer_.begin(), it);
+            }
+            
+            // 检查是否有足够的数据读取帧长度
+            if (data_buffer_.size() < 12) {
+                break;
+            }
+            
+            // 检查帧头
+            if (data_buffer_[0] != 0x55 || data_buffer_[1] != 0xAA) {
+                data_buffer_.erase(data_buffer_.begin()); // 移除错误的字节
+                continue;
+            }
+            
+            // 解析帧长度 (小端序)
+            uint32_t frameLength = data_buffer_[2] | (data_buffer_[3] << 8) | 
+                                 (data_buffer_[4] << 16) | (data_buffer_[5] << 24);
+            
+            // 检查帧长度是否合理（避免过大的帧）
+            if (frameLength > 1000 || frameLength < 12) {
+                data_buffer_.erase(data_buffer_.begin()); // 移除错误的字节
+                continue;
+            }
+            
+            // 检查是否有完整的帧
+            if (data_buffer_.size() < frameLength) {
+                break; // 等待更多数据
+            }
+            
+            // 提取完整的帧
+            std::vector<uint8_t> frame(data_buffer_.begin(), data_buffer_.begin() + frameLength);
+            data_buffer_.erase(data_buffer_.begin(), data_buffer_.begin() + frameLength);
+            
+            // 解析这个帧
+            parseFrame(frame);
         }
         
-        // 检查帧头
-        if (data[0] != 0x55 || data[1] != 0xAA)
-        {
-            return;
+        // 防止缓冲区过大
+        if (data_buffer_.size() > 2000) {
+            data_buffer_.clear();
+            ROS_WARN("清空过大的数据缓冲区");
         }
-        
-        // 解析帧长度 (小端序)
-        uint32_t frameLength = data[2] | (data[3] << 8) | (data[4] << 16) | (data[5] << 24);
+    }
+    
+    void parseFrame(const std::vector<uint8_t>& data)
+    {
+        if (data.size() < 12) return;
         
         // 解析时间间隔
         uint16_t timeInterval = data[6] | (data[7] << 8);
@@ -76,7 +144,7 @@ public:
         ROS_INFO("解析到 %d 个目标", targetNum);
         
         // 解析TLV数据并发布点云
-        if (data.size() > 12)
+        if (data.size() > 12 && targetNum > 0)
         {
             std::vector<PointData> points = parseTLVData(data, 12, targetNum);
             publishPointCloud(points);
