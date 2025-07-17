@@ -54,6 +54,18 @@ public:
         if(ser_.isOpen())
         {
             ROS_INFO("Serial Port initialized");
+            
+            // 发送启动命令
+            try
+            {
+                std::string start_cmd = "AT+START\n";
+                ser_.write(start_cmd);
+                ROS_INFO("Sent startup command: %s", start_cmd.c_str());
+            }
+            catch(serial::IOException& e)
+            {
+                ROS_ERROR("Error sending startup command: %s", e.what());
+            }
         }
         else
         {
@@ -95,10 +107,18 @@ public:
                 std::string result = ser_.read(ser_.available());
                 if(!result.empty())
                 {
+                    // 转换为16进制字符串
+                    std::stringstream hex_stream;
+                    for(unsigned char c : result)
+                    {
+                        hex_stream << std::hex << std::uppercase << std::setfill('0') << std::setw(2) << (int)c << " ";
+                    }
+                    std::string hex_string = hex_stream.str();
+                    
                     std_msgs::String msg;
-                    msg.data = result;
+                    msg.data = hex_string;
                     serial_pub_.publish(msg);
-                    ROS_INFO("Received: %s", result.c_str());
+                    ROS_INFO("Received (HEX): %s", hex_string.c_str());
                 }
             }
             catch(serial::IOException& e)

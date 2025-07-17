@@ -1,10 +1,18 @@
 <?xml version="1.0"?>
 <launch>
-    <!-- Serial communication node -->
+    <!-- 串口参数 -->
+    <arg name="port" default="/dev/ttyUSB0" />
+    <arg name="baudrate" default="2000000" />
+    <arg name="timeout" default="1000" />
+    
+    <!-- 启动串口节点 -->
     <node name="serial_node" pkg="serial_comm" type="serial_node" output="screen">
-        <!-- Serial port parameters -->
-        <param name="port" value="/dev/ttyUSB0" />
-        <param name="baudrate" value="2000000" />
-        <param name="timeout" value="1000" />
+        <param name="port" value="$(arg port)" />
+        <param name="baudrate" value="$(arg baudrate)" />
+        <param name="timeout" value="$(arg timeout)" />
     </node>
+    
+    <!-- 启动协议解析器 -->
+    <node name="protocol_parser" pkg="serial_comm" type="protocol_parser" output="screen" />
+    
 </launch>

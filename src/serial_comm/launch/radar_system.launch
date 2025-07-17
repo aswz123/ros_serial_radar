@@ -1,0 +1,22 @@
+<?xml version="1.0"?>
+<launch>
+    <!-- 串口参数 -->
+    <arg name="port" default="/dev/ttyUSB0" />
+    <arg name="baudrate" default="2000000" />
+    <arg name="timeout" default="1000" />
+    
+    <!-- 启动串口节点 -->
+    <node name="serial_node" pkg="serial_comm" type="serial_node" output="screen">
+        <param name="port" value="$(arg port)" />
+        <param name="baudrate" value="$(arg baudrate)" />
+        <param name="timeout" value="$(arg timeout)" />
+    </node>
+    
+    <!-- 启动协议解析器 -->
+    <node name="protocol_parser" pkg="serial_comm" type="protocol_parser" output="screen" />
+    
+    <!-- 可选：启动RViz查看点云 -->
+    <arg name="use_rviz" default="true" />
+    <node name="rviz" pkg="rviz" type="rviz" args="-d $(find serial_comm)/config/radar_viz.rviz" if="$(arg use_rviz)" />
+    
+</launch>
