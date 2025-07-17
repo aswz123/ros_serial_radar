@@ -30,6 +30,31 @@ private:
         uint32_t intensity;
     };
 
+    std::vector<uint8_t> hexStringToBytes(const std::string& hexStr)
+    {
+        std::vector<uint8_t> bytes;
+        std::stringstream ss(hexStr);
+        std::string hex;
+        
+        while (ss >> hex)
+        {
+            if (hex.length() == 2)
+            {
+                try
+                {
+                    uint8_t byte = static_cast<uint8_t>(std::stoul(hex, nullptr, 16));
+                    bytes.push_back(byte);
+                }
+                catch(const std::exception& e)
+                {
+                    ROS_WARN("Cannot parse hex string: %s", hex.c_str());
+                }
+            }
+        }
+        
+        return bytes;
+    }
+
 public:
     ProtocolParser() : nh_("~")
     {
@@ -52,157 +77,149 @@ public:
     {
         std::vector<uint8_t> data = hexStringToBytes(hexStr);
         
-        // 将新数据添加到缓冲区
+        if (data.empty()) return;
+        
+        // Add new data to buffer
         data_buffer_.insert(data_buffer_.end(), data.begin(), data.end());
         
-        // 处理缓冲区中的完整帧
+        // 只在调试模式下输出详细信息
+        // ROS_DEBUG("Received %zu bytes, buffer total: %zu bytes", data.size(), data_buffer_.size());
+        
+        // Process complete frames in buffer
         processBuffer();
     }
-    
+
     void processBuffer()
     {
-        while (data_buffer_.size() >= 12) // 最小帧长度检查
+        while (data_buffer_.size() >= 12) // Minimum frame length check
         {
-            // 寻找帧头
-            auto it = std::find_if(data_buffer_.begin(), data_buffer_.end() - 1, 
-                [this](uint8_t byte) {
-                    auto next_it = std::next(&byte - &data_buffer_[0] + data_buffer_.begin());
-                    return byte == 0x55 && next_it != data_buffer_.end() && *next_it == 0xAA;
-                });
+            // Find frame header 0x55 0xAA
+            size_t header_pos = SIZE_MAX;
             
-            if (it == data_buffer_.end() - 1) {
-                // 没有找到完整的帧头，保留最后一个字节
-                if (data_buffer_.size() > 1) {
-                    data_buffer_.erase(data_buffer_.begin(), data_buffer_.end() - 1);
+            for (size_t i = 0; i <= data_buffer_.size() - 2; i++)
+            {
+                if (data_buffer_[i] == 0x55 && data_buffer_[i + 1] == 0xAA)
+                {
+                    header_pos = i;
+                    break;
+                }
+            }
+            
+            if (header_pos == SIZE_MAX)
+            {
+                // No frame header found, keep last byte (might be start of 0x55)
+                if (data_buffer_.size() > 1)
+                {
+                    if (data_buffer_.back() == 0x55)
+                    {
+                        uint8_t last_byte = data_buffer_.back();
+                        data_buffer_.clear();
+                        data_buffer_.push_back(last_byte);
+                    }
+                    else
+                    {
+                        data_buffer_.clear();
+                    }
                 }
                 break;
             }
             
-            // 移除帧头之前的数据
-            size_t header_pos = std::distance(data_buffer_.begin(), it);
-            if (header_pos > 0) {
-                data_buffer_.erase(data_buffer_.begin(), it);
+            // Remove invalid data before frame header
+            if (header_pos > 0)
+            {
+                data_buffer_.erase(data_buffer_.begin(), data_buffer_.begin() + header_pos);
             }
             
-            // 检查是否有足够的数据读取帧长度
-            if (data_buffer_.size() < 12) {
-                break;
+            // Check if we have enough data to read frame length
+            if (data_buffer_.size() < 6)
+            {
+                break; // Wait for more data
             }
             
-            // 检查帧头
-            if (data_buffer_[0] != 0x55 || data_buffer_[1] != 0xAA) {
-                data_buffer_.erase(data_buffer_.begin()); // 移除错误的字节
-                continue;
-            }
-            
-            // 解析帧长度 (小端序)
+            // Parse frame length (bytes 2-5, little endian)
             uint32_t frameLength = data_buffer_[2] | (data_buffer_[3] << 8) | 
-                                 (data_buffer_[4] << 16) | (data_buffer_[5] << 24);
+                                  (data_buffer_[4] << 16) | (data_buffer_[5] << 24);
             
-            // 检查帧长度是否合理（避免过大的帧）
-            if (frameLength > 1000 || frameLength < 12) {
-                data_buffer_.erase(data_buffer_.begin()); // 移除错误的字节
+            // 只在异常情况下输出警告
+            if (frameLength > 500 || frameLength < 12)
+            {
+                ROS_WARN("Abnormal frame length: %u, removing header and searching again", frameLength);
+                data_buffer_.erase(data_buffer_.begin(), data_buffer_.begin() + 2);
                 continue;
             }
             
-            // 检查是否有完整的帧
-            if (data_buffer_.size() < frameLength) {
-                break; // 等待更多数据
+            // Check if we have complete frame
+            if (data_buffer_.size() < frameLength)
+            {
+                break; // Wait for more data
             }
             
-            // 提取完整的帧
+            // Extract complete frame
             std::vector<uint8_t> frame(data_buffer_.begin(), data_buffer_.begin() + frameLength);
             data_buffer_.erase(data_buffer_.begin(), data_buffer_.begin() + frameLength);
             
-            // 解析这个帧
+            // Parse this frame
             parseFrame(frame);
         }
         
-        // 防止缓冲区过大
-        if (data_buffer_.size() > 2000) {
+        // Prevent buffer from becoming too large
+        if (data_buffer_.size() > 1000)
+        {
+            ROS_WARN("Buffer too large, clearing");
             data_buffer_.clear();
-            ROS_WARN("清空过大的数据缓冲区");
         }
     }
     
     void parseFrame(const std::vector<uint8_t>& data)
     {
-        if (data.size() < 12) return;
+        if (data.size() < 12)
+        {
+            ROS_WARN("Frame length insufficient: %zu", data.size());
+            return;
+        }
         
-        // 解析时间间隔
+        // Verify frame header
+        if (data[0] != 0x55 || data[1] != 0xAA)
+        {
+            ROS_WARN("Frame header verification failed");
+            return;
+        }
+        
+        // Parse frame components
+        uint32_t frameLength = data[2] | (data[3] << 8) | (data[4] << 16) | (data[5] << 24);
         uint16_t timeInterval = data[6] | (data[7] << 8);
-        
-        // 解析TLV数量
         uint8_t numTLVs = data[8];
-        
-        // 解析类型
         uint8_t type = data[9];
-        
-        // 解析目标数量
         uint16_t targetNum = data[10] | (data[11] << 8);
         
-        ROS_INFO("解析到 %d 个目标", targetNum);
+        // 只输出关键信息
+        ROS_INFO("Frame: %u bytes, %u targets", frameLength, targetNum);
         
-        // 解析TLV数据并发布点云
-        if (data.size() > 12 && targetNum > 0)
+        if (targetNum > 0 && targetNum < 100) // Reasonable target count check
         {
-            std::vector<PointData> points = parseTLVData(data, 12, targetNum);
-            publishPointCloud(points);
+            // Parse point cloud data directly
+            std::vector<PointData> points = parseDirectPointData(data, 12, targetNum);
+            if (!points.empty())
+            {
+                publishPointCloud(points);
+            }
         }
     }
 
-private:
-    std::vector<uint8_t> hexStringToBytes(const std::string& hexStr)
-    {
-        std::vector<uint8_t> bytes;
-        std::stringstream ss(hexStr);
-        std::string hex;
-        
-        while (ss >> hex)
-        {
-            if (hex.length() == 2)
-            {
-                uint8_t byte = static_cast<uint8_t>(std::stoul(hex, nullptr, 16));
-                bytes.push_back(byte);
-            }
-        }
-        
-        return bytes;
-    }
-    
-    std::vector<PointData> parseTLVData(const std::vector<uint8_t>& data, size_t startIndex, uint16_t targetNum)
+    // 新增：直接解析点数据的函数
+    std::vector<PointData> parseDirectPointData(const std::vector<uint8_t>& data, size_t startIndex, uint16_t targetNum)
     {
         std::vector<PointData> points;
         size_t index = startIndex;
+        int validPoints = 0;
+        int totalPoints = 0;
         
-        while (index < data.size() && index + 4 < data.size())
+        // 每个点12字节
+        for (int pointCount = 0; pointCount < targetNum && index + 12 <= data.size(); pointCount++)
         {
-            // 解析TLV头部
-            uint8_t type = data[index];
-            uint8_t length = data[index + 1];
+            totalPoints++;
             
-            if (type == 1) // 点云数据
-            {
-                std::vector<PointData> tlv_points = parsePointCloudData(data, index + 2, length, targetNum);
-                points.insert(points.end(), tlv_points.begin(), tlv_points.end());
-            }
-            
-            index += 2 + length; // 移动到下一个TLV
-        }
-        
-        return points;
-    }
-    
-    std::vector<PointData> parsePointCloudData(const std::vector<uint8_t>& data, size_t startIndex, uint8_t length, uint16_t targetNum)
-    {
-        std::vector<PointData> points;
-        size_t index = startIndex;
-        int pointCount = 0;
-        
-        // 每个点包含: idx1(2B) + idx2(2B) + idx3(2B) + idx4(2B) + powABS(4B) = 12字节
-        while (index + 12 <= startIndex + length && pointCount < targetNum)
-        {
-            // 解析距离和角度索引
+            // 解析索引值
             uint16_t idx1 = data[index] | (data[index + 1] << 8);
             uint16_t idx2 = data[index + 2] | (data[index + 3] << 8);
             uint16_t idx3 = data[index + 4] | (data[index + 5] << 8);
@@ -212,39 +229,50 @@ private:
             uint32_t powABS = data[index + 8] | (data[index + 9] << 8) | 
                              (data[index + 10] << 16) | (data[index + 11] << 24);
             
-            // 计算实际物理值
+            // 物理值转换
             double range = idx1 * 0.05; // 距离 (m)
-            double velocity = (idx2 - 32) * 0.10416; // 速度 (m/s)
-            double azimuth = (idx3 - 127) * 180.0 / M_PI; // 方位角 (度)
-            double elevation = (idx4 - 127) * 180.0 / M_PI; // 俯仰角 (度)
+            double velocity = (int16_t)(idx2 - 32768) * 0.10416; // 速度 (m/s)
+            double azimuth = (int16_t)(idx3 - 32768) * 180.0 / 32768.0; // 方位角 (度)
+            double elevation = (int16_t)(idx4 - 32768) * 90.0 / 32768.0; // 俯仰角 (度)
             
-            // 将角度转换为弧度
-            double azimuth_rad = azimuth * M_PI / 180.0;
-            double elevation_rad = elevation * M_PI / 180.0;
-            
-            // 球坐标转直角坐标
-            double x = range * cos(elevation_rad) * cos(azimuth_rad);
-            double y = range * cos(elevation_rad) * sin(azimuth_rad);
-            double z = range * sin(elevation_rad);
-            
-            // 创建点数据
-            PointData point;
-            point.x = x;
-            point.y = y;
-            point.z = z;
-            point.range = range;
-            point.velocity = velocity;
-            point.azimuth = azimuth;
-            point.elevation = elevation;
-            point.intensity = powABS;
-            
-            points.push_back(point);
-            
-            ROS_INFO("点 %d: 距离=%.2fm, 速度=%.2fm/s, 方位角=%.1f°, 俯仰角=%.1f°, XYZ=(%.2f,%.2f,%.2f)", 
-                     pointCount + 1, range, velocity, azimuth, elevation, x, y, z);
+            // 放宽数据有效性检查
+            if (range > 0.05 && range < 300 && 
+                azimuth >= -180 && azimuth <= 180 && 
+                elevation >= -90 && elevation <= 90 &&
+                powABS > 0) // 确保功率值有效
+            {
+                validPoints++;
+                
+                // 转换为弧度
+                double azimuth_rad = azimuth * M_PI / 180.0;
+                double elevation_rad = elevation * M_PI / 180.0;
+                
+                // 球坐标转直角坐标
+                double x = range * cos(elevation_rad) * cos(azimuth_rad);
+                double y = range * cos(elevation_rad) * sin(azimuth_rad);
+                double z = range * sin(elevation_rad);
+                
+                PointData point;
+                point.x = x;
+                point.y = y;
+                point.z = z;
+                point.range = range;
+                point.velocity = velocity;
+                point.azimuth = azimuth;
+                point.elevation = elevation;
+                point.intensity = powABS;
+                
+                points.push_back(point);
+            }
             
             index += 12;
-            pointCount++;
+        }
+        
+        // 输出统计信息
+        if (totalPoints > 0)
+        {
+            ROS_INFO("Parsed %d/%d valid points (%.1f%%)", validPoints, totalPoints, 
+                     100.0 * validPoints / totalPoints);
         }
         
         return points;
@@ -284,7 +312,8 @@ private:
         // 发布点云
         pointcloud_pub_.publish(cloud_msg);
         
-        ROS_INFO("发布了包含 %zu 个点的点云", points.size());
+        // 只输出简洁的统计信息
+        ROS_INFO("Published pointcloud: %zu points", points.size());
     }
 };
 
