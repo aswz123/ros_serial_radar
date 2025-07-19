@@ -47,8 +47,6 @@ ros/ros.h
 -
 sensor_msgs/PointCloud2.h
 -
-pcl/point_cloud.h
--
 pcl/point_types.h
 -
 pcl_conversions/pcl_conversions.h
@@ -70,6 +68,8 @@ sstream
 iomanip
 -
 cmath
+-
+cstring
 -
 
 /opt/ros/noetic/include/pcl_conversions/pcl_conversions.h

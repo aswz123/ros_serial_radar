@@ -1,6 +1,5 @@
 #include <ros/ros.h>
 #include <sensor_msgs/PointCloud2.h>
-#include <pcl/point_cloud.h>
 #include <pcl/point_types.h>
 #include <pcl_conversions/pcl_conversions.h>
 #include <std_msgs/String.h>
@@ -12,16 +11,18 @@
 #include <sstream>
 #include <iomanip>
 #include <cmath>
+#include <cstring> // 添加头文件以支持 memcpy
 
 class ProtocolParser
 {
 private:
     ros::NodeHandle nh_;
     ros::Publisher pointcloud_pub_;
-    ros::Publisher radar_pointcloud_pub_;  // 新的自定义消息发布者
+    ros::Publisher radar_pointcloud_pub_;     // 自定义消息发布者
     ros::Subscriber hex_data_sub_;
     
     std::vector<uint8_t> data_buffer_; // 数据缓冲区
+    std::vector<float> velocities_;    // 存储速度信息，参考代码思路
     
     struct PointData
     {
@@ -66,7 +67,7 @@ public:
         radar_pointcloud_pub_ = nh_.advertise<serial_comm::RadarPointCloud>("/radar/pointcloud_custom", 10);
         hex_data_sub_ = nh_.subscribe("/serial/received", 100, &ProtocolParser::hexDataCallback, this); // 增大队列
         
-        ROS_INFO("Protocol Parser initialized with custom messages");
+        ROS_INFO("Protocol Parser initialized - /radar/pointcloud with velocity field, custom messages");
         
         // 给串口节点一些时间来初始化
         ros::Duration(1.0).sleep();
@@ -205,14 +206,17 @@ public:
             // Parse point cloud data directly
             std::vector<PointData> points = parseDirectPointData(data, 12, targetNum);
             
-            // 发布点云
-            publishPointCloud(points);
+            // 直接发布带velocity字段的点云到/radar/pointcloud
+            publishPointCloudToRadarTopic(points);
+            
+            // 发布自定义雷达消息到/radar/pointcloud_custom
+            publishRadarPointCloud(points);
         }
         else
         {
             // 如果目标数异常，发布空点云保持连续性
             std::vector<PointData> empty_points;
-            publishPointCloud(empty_points);
+            publishPointCloudToRadarTopic(empty_points);
             ROS_WARN("Abnormal target count: %u, publishing empty pointcloud", targetNum);
         }
     }
@@ -361,32 +365,35 @@ public:
     
     void publishPointCloud(const std::vector<PointData>& points)
     {
-        // 创建PCL点云
-        pcl::PointCloud<pcl::PointXYZI>::Ptr cloud(new pcl::PointCloud<pcl::PointXYZI>);
-        cloud->reserve(points.size()); // 预分配内存
+        // 创建标准PCL点云 (XYZI)
+        pcl::PointCloud<pcl::PointXYZI> cloud;
+        cloud.width = points.size();
+        cloud.height = 1;
+        cloud.points.resize(cloud.width * cloud.height);
         
-        for (const auto& point : points)
+        // 清空并准备velocity向量，参考代码思路
+        velocities_.clear();
+        velocities_.reserve(points.size());
+        
+        // 填充点云数据
+        for (size_t i = 0; i < points.size(); i++)
         {
-            pcl::PointXYZI pcl_point;
-            pcl_point.x = point.x;
-            pcl_point.y = point.y;
-            pcl_point.z = point.z;
-            pcl_point.intensity = point.intensity;
+            const auto& point = points[i];
             
-            cloud->points.push_back(pcl_point);
+            cloud.points[i].x = point.x;
+            cloud.points[i].y = point.y;
+            cloud.points[i].z = point.z;
+            cloud.points[i].intensity = static_cast<float>(point.intensity);
+            
+            // 存储速度信息
+            velocities_.push_back(static_cast<float>(point.velocity));
         }
         
-        cloud->width = cloud->points.size();
-        cloud->height = 1;
-        cloud->is_dense = true;
-        
-        // 转换为ROS消息
+        // 发布标准XYZI点云
         sensor_msgs::PointCloud2 cloud_msg;
-        pcl::toROSMsg(*cloud, cloud_msg);
+        pcl::toROSMsg(cloud, cloud_msg);
         cloud_msg.header.stamp = ros::Time::now();
         cloud_msg.header.frame_id = "radar_frame";
-        
-        // 发布点云
         pointcloud_pub_.publish(cloud_msg);
         
         // 发布自定义RadarPointCloud消息
@@ -395,11 +402,11 @@ public:
         // 简化输出信息
         if (points.empty())
         {
-            ROS_DEBUG("Published empty pointcloud");
+            ROS_DEBUG("Published empty pointclouds");
         }
         else
         {
-            ROS_INFO("Published pointcloud: %zu points", points.size());
+            ROS_INFO("Published pointclouds: %zu points (XYZI + XYZI+V + Custom)", points.size());
         }
     }
     
@@ -430,6 +437,95 @@ public:
         
         // 发布自定义消息
         radar_pointcloud_pub_.publish(radar_msg);
+    }
+    
+    // 新增函数：直接发布带velocity字段的点云到/radar/pointcloud话题
+    void publishPointCloudToRadarTopic(const std::vector<PointData>& points)
+    {
+        // 创建带velocity字段的PointCloud2消息
+        sensor_msgs::PointCloud2 velocity_msg;
+        
+        // 设置header
+        velocity_msg.header.stamp = ros::Time::now();
+        velocity_msg.header.frame_id = "radar_frame";
+        
+        // 设置点云结构：XYZI + velocity (每点20字节)
+        velocity_msg.height = 1;
+        velocity_msg.width = points.size();
+        velocity_msg.is_bigendian = false;
+        velocity_msg.is_dense = false;
+        
+        // 定义字段结构：XYZI + velocity
+        velocity_msg.fields.resize(5);
+        
+        // X字段
+        velocity_msg.fields[0].name = "x";
+        velocity_msg.fields[0].offset = 0;
+        velocity_msg.fields[0].datatype = sensor_msgs::PointField::FLOAT32;
+        velocity_msg.fields[0].count = 1;
+        
+        // Y字段  
+        velocity_msg.fields[1].name = "y";
+        velocity_msg.fields[1].offset = 4;
+        velocity_msg.fields[1].datatype = sensor_msgs::PointField::FLOAT32;
+        velocity_msg.fields[1].count = 1;
+        
+        // Z字段
+        velocity_msg.fields[2].name = "z";
+        velocity_msg.fields[2].offset = 8;
+        velocity_msg.fields[2].datatype = sensor_msgs::PointField::FLOAT32;
+        velocity_msg.fields[2].count = 1;
+        
+        // intensity字段
+        velocity_msg.fields[3].name = "intensity";
+        velocity_msg.fields[3].offset = 12;
+        velocity_msg.fields[3].datatype = sensor_msgs::PointField::FLOAT32;
+        velocity_msg.fields[3].count = 1;
+        
+        // velocity字段
+        velocity_msg.fields[4].name = "velocity";
+        velocity_msg.fields[4].offset = 16;
+        velocity_msg.fields[4].datatype = sensor_msgs::PointField::FLOAT32;
+        velocity_msg.fields[4].count = 1;
+        
+        // 设置点步长和行步长
+        velocity_msg.point_step = 20;  // 5个float32 = 20字节
+        velocity_msg.row_step = velocity_msg.point_step * velocity_msg.width;
+        
+        // 为数据分配空间
+        velocity_msg.data.resize(velocity_msg.row_step);
+        
+        // 填充点云数据
+        for (size_t i = 0; i < points.size(); i++)
+        {
+            const auto& point = points[i];
+            size_t offset = i * velocity_msg.point_step;
+            
+            // 使用memcpy直接复制float值
+            float x = static_cast<float>(point.x);
+            float y = static_cast<float>(point.y); 
+            float z = static_cast<float>(point.z);
+            float intensity = static_cast<float>(point.intensity);
+            float velocity = static_cast<float>(point.velocity);
+            
+            memcpy(&velocity_msg.data[offset + 0], &x, sizeof(float));
+            memcpy(&velocity_msg.data[offset + 4], &y, sizeof(float));
+            memcpy(&velocity_msg.data[offset + 8], &z, sizeof(float));
+            memcpy(&velocity_msg.data[offset + 12], &intensity, sizeof(float));
+            memcpy(&velocity_msg.data[offset + 16], &velocity, sizeof(float));
+        }
+        
+        // 发布到/radar/pointcloud话题
+        pointcloud_pub_.publish(velocity_msg);
+        
+        if (points.size() > 0)
+        {
+            ROS_INFO("Published pointcloud with velocity: %zu points to /radar/pointcloud", points.size());
+        }
+        else
+        {
+            ROS_INFO("Published empty pointcloud with velocity to /radar/pointcloud");
+        }
     }
 };
 
